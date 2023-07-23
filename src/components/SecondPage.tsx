@@ -167,7 +167,7 @@ const SecondPage: React.FC = () => {
 
           return (
             <React.Fragment key={dept.department}>
-              <ListItem button onClick={() => handleExpandDepartment(dept.department)}>
+              <ListItem button >
                 <Checkbox
                   checked={departmentChecked === true}
                   indeterminate={departmentChecked === "indeterminate"}
@@ -175,7 +175,7 @@ const SecondPage: React.FC = () => {
                     handleDepartmentCheckboxChange(dept.department, event.target.checked)
                   }
                 />
-                <ListItemText primary={`${dept.department} (${dept.sub_departments.length})`} />
+                <ListItemText onClick={() => handleExpandDepartment(dept.department)} primary={`${dept.department} (${dept.sub_departments.length})`} />
                 {expanded ? <ExpandLess /> : <ExpandMore />}
               </ListItem>
 
