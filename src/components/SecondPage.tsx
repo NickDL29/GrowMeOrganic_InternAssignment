@@ -4,26 +4,20 @@ import { useNavigate } from "react-router-dom";
 import { DataGrid, GridColDef, GridRowsProp } from "@mui/x-data-grid";
 import axios from "axios";
 import Post from "./Post";
-import {
-  List,
-  ListItem,
-  ListItemText,
-  Collapse,
-  Checkbox,
-} from "@mui/material";
+import { List, ListItem, ListItemText, Collapse, Checkbox, Button, Box } from "@mui/material";
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
-
-import { Button, Box } from "@mui/material";
 
 interface Department {
   department: string;
   sub_departments: string[];
 }
 
-const SecondPage: React.FC = () => {
+interface SubDepartmentsState {
+  [subDept: string]: boolean;
+}
 
-  
+const SecondPage: React.FC = () => {
   const navigate = useNavigate();
 
   // Check if user details exist in local storage
@@ -35,13 +29,10 @@ const SecondPage: React.FC = () => {
     }
   }, [navigate]);
 
-
   const [posts, setPosts] = useState<GridRowsProp>([]);
-  const [expandedDepartments, setExpandedDepartments] = useState<
-    Record<string, boolean>
-  >({});
+  const [expandedDepartments, setExpandedDepartments] = useState<Record<string, boolean>>({});
 
-  
+  const [departmentsState, setDepartmentsState] = useState<Record<string, boolean | SubDepartmentsState>>({});
 
   // Fetch data from the API
   useEffect(() => {
@@ -61,7 +52,6 @@ const SecondPage: React.FC = () => {
       });
   }, []);
 
-  // Define columns for the MUI Data Grid
   const columns: GridColDef[] = [
     { field: "id", headerName: "ID", width: 100 },
     { field: "userId", headerName: "User-ID", width: 100 },
@@ -74,6 +64,61 @@ const SecondPage: React.FC = () => {
       ...prevExpanded,
       [department]: !prevExpanded[department],
     }));
+  };
+
+  const handleDepartmentCheckboxChange = (department: string, checked: boolean) => {
+    // Set the state for the main department checkbox
+    setDepartmentsState((prevState) => ({
+      ...prevState,
+      [department]: checked,
+    }));
+
+    // If checked, set all sub-departments to true
+    if (checked) {
+      const subDepartments = departments.find((dept) => dept.department === department)?.sub_departments;
+      if (subDepartments) {
+        const subDeptState: SubDepartmentsState = subDepartments.reduce(
+          (acc, subDept) => ({ ...acc, [subDept]: true }),
+          {}
+        );
+        setDepartmentsState((prevState) => ({
+          ...prevState,
+          [department]: subDeptState,
+        }));
+      }
+    }
+  };
+
+  const handleSubDepartmentCheckboxChange = (
+    department: string,
+    subDept: string,
+    checked: boolean
+  ) => {
+    setDepartmentsState((prevState) => ({
+      ...prevState,
+      [department]: {
+        ...(prevState[department] as SubDepartmentsState),
+        [subDept]: checked,
+      },
+    }));
+  };
+
+  const isDepartmentChecked = (department: string) => {
+    const subDepts = departments.find((dept) => dept.department === department)?.sub_departments;
+    if (!subDepts) return false;
+
+    const allSubDeptsChecked = subDepts.every(
+      (subDept) => (departmentsState[department] as SubDepartmentsState)?.[subDept] === true
+    );
+    const someSubDeptsChecked = subDepts.some(
+      (subDept) => (departmentsState[department] as SubDepartmentsState)?.[subDept] === true
+    );
+
+    return allSubDeptsChecked ? true : someSubDeptsChecked ? "indeterminate" : false;
+  };
+
+  const isSubDepartmentChecked = (department: string, subDept: string) => {
+    return (departmentsState[department] as SubDepartmentsState)?.[subDept] || false;
   };
 
   const departments: Department[] = [
@@ -116,36 +161,46 @@ const SecondPage: React.FC = () => {
       </Typography>
 
       <List>
-        {departments.map((dept) => (
-          <React.Fragment key={dept.department}>
-            <ListItem
-              button
-              onClick={() => handleExpandDepartment(dept.department)}
-            >
-              <Checkbox />
-              <ListItemText primary={dept.department} />
-              {expandedDepartments[dept.department] ? (
-                <ExpandLess />
-              ) : (
-                <ExpandMore />
-              )}
-            </ListItem>
+        {departments.map((dept) => {
+          const departmentChecked = isDepartmentChecked(dept.department);
+          const expanded = expandedDepartments[dept.department];
 
-            <Collapse
-              in={expandedDepartments[dept.department]}
-              timeout="auto"
-            >
-              <List component="div" disablePadding>
-                {dept.sub_departments.map((subDept) => (
-                  <ListItem key={subDept} button sx={{ marginLeft: 4 }}>
-                    <Checkbox />
-                    <ListItemText primary={subDept} />
-                  </ListItem>
-                ))}
-              </List>
-            </Collapse>
-          </React.Fragment>
-        ))}
+          return (
+            <React.Fragment key={dept.department}>
+              <ListItem button onClick={() => handleExpandDepartment(dept.department)}>
+                <Checkbox
+                  checked={departmentChecked === true}
+                  indeterminate={departmentChecked === "indeterminate"}
+                  onChange={(event) =>
+                    handleDepartmentCheckboxChange(dept.department, event.target.checked)
+                  }
+                />
+                <ListItemText primary={`${dept.department} (${dept.sub_departments.length})`} />
+                {expanded ? <ExpandLess /> : <ExpandMore />}
+              </ListItem>
+
+              <Collapse in={expanded} timeout="auto">
+                <List component="div" disablePadding>
+                  {dept.sub_departments.map((subDept) => (
+                    <ListItem key={subDept} button sx={{ marginLeft: 4 }}>
+                      <Checkbox
+                        checked={isSubDepartmentChecked(dept.department, subDept)}
+                        onChange={(event) =>
+                          handleSubDepartmentCheckboxChange(
+                            dept.department,
+                            subDept,
+                            event.target.checked
+                          )
+                        }
+                      />
+                      <ListItemText primary={subDept} />
+                    </ListItem>
+                  ))}
+                </List>
+              </Collapse>
+            </React.Fragment>
+          );
+        })}
       </List>
     </>
   );
