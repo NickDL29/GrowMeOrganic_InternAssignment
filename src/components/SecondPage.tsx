@@ -122,6 +122,7 @@ const SecondPage: React.FC = () => {
               button
               onClick={() => handleExpandDepartment(dept.department)}
             >
+              <Checkbox />
               <ListItemText primary={dept.department} />
               {expandedDepartments[dept.department] ? (
                 <ExpandLess />
@@ -133,11 +134,10 @@ const SecondPage: React.FC = () => {
             <Collapse
               in={expandedDepartments[dept.department]}
               timeout="auto"
-              unmountOnExit
             >
               <List component="div" disablePadding>
                 {dept.sub_departments.map((subDept) => (
-                  <ListItem key={subDept} button>
+                  <ListItem key={subDept} button sx={{ marginLeft: 4 }}>
                     <Checkbox />
                     <ListItemText primary={subDept} />
                   </ListItem>
